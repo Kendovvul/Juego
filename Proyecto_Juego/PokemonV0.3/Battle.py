@@ -1,9 +1,11 @@
 import random
 from constants import *
+from Combat import *
 
 class Battle:
 
     def __init__(self, player, pkm2, typec):
+        
         self.__Player = player
         self.__Current_Pokemon = player.getTeam()[0]
         self.__Pokemon2 = pkm2
@@ -12,12 +14,24 @@ class Battle:
         self.__Winner = None
         self.__Loser = None
         self.__Huir = False
+        self.__Turns = []
+
+###############################################################################################################
+
+    def addAction(self, action):
+        self.__Turns.append(action)
+
+###############################################################################################################
 
     def Huir(self):
         return self.__Huir
 
+###############################################################################################################
+
     def ResetHuida(self):
         self.__Huir = False
+
+###############################################################################################################
 
     def Command(self):
         comando = input()
@@ -25,54 +39,10 @@ class Battle:
             comando = input()
         return comando
 
-    def Calculation_Damage(self, pkm1, pkm2, index_attack):
-        Bonus = 1
-        Effectiveness = EFFECTIVENESS[pkm1.getAttacks()[index_attack].getType()][pkm2.getType()[1]] * EFFECTIVENESS[pkm1.getAttacks()[index_attack].getType()][pkm2.getType()[1]]
-        Varation = random.uniform(85, 100)
-        Level = pkm1.getLevel()
-        Power = pkm1.getAttacks()[index_attack].getPower()
-
-        if pkm1.getAttacks()[index_attack].getCategory() == PHYSICAL:
-            Attack = pkm1.getStats().getAttack()
-            Defense = pkm2.getStats().getDefense()
-
-        elif pkm1.getAttacks()[index_attack].getCategory() == SPECIAL:
-            Attack = pkm1.getStats().getSpAttack()
-            Defense = pkm2.getStats().getSpDefense()
-
-        else:
-            pass
-
-        if (pkm1.getAttacks()[index_attack].getType() == pkm1.getType() or pkm1.getAttacks()[index_attack].getType() == pkm1.getType(False)):
-            print(pkm1.getAttacks()[index_attack].getType())
-            Bonus = 1.5
-
-
-        damage = 0.01 * Bonus * Effectiveness * Varation * (((((0.2 * Level)+2) * Attack * Power)/(25 * Defense))+2)
-        return int(damage)
-
-    def Attack(self, pkm1, pkm2, index_attack):
-
-        print(pkm1.getName(), "ha usado", pkm1.getAttacks()[index_attack].getName())
-
-        if pkm1.getAttacks()[index_attack].getCategory() == STATE:
-            pass
-
-        else:
-            pkm2.TakeDamage(self.Calculation_Damage(pkm1, pkm2, index_attack))
-            pkm1.getAttacks()[index_attack].Attack()
-        
-        if pkm2.getCurrent_HP() <= 0:
-            pkm2.setCurrent_HP(0)
-            print(pkm2.getName(),":",str(pkm2.getCurrent_HP())+"/"+str(pkm2.getMax_HP()),"HP")
-            return
-        print(pkm2.getName(),":",str(pkm2.getCurrent_HP())+"/"+str(pkm2.getMax_HP()),"HP")
-
-
 ###############################################################################################################
-    def Combat(self):
-        Pokemon1 = self.__Current_Pokemon
-        attacks = Pokemon1.getAttacks()
+
+    def Combat(self, Pokemon):
+        attacks = Pokemon.getAttacks()
         cont = 1
 
         for x in attacks:
@@ -84,18 +54,11 @@ class Battle:
         while index_attack not in range(len(attacks)):
             index_attack = int(input())
 
-        if Pokemon1.getStats().getCurrent_Speed() > self.__Pokemon2.getStats().getCurrent_Speed():
-                self.Attack(Pokemon1, self.__Pokemon2, index_attack)
-                index = random.randint(0, len(self.__Pokemon2.getAttacks())-1)
-                self.Attack(self.__Pokemon2, Pokemon1, index)
-        else:
-            index = random.randint(0, len(self.__Pokemon2.attacks)-1)
-            self.Attack(self.__Pokemon2, Pokemon1, index)
-            self.Attack(Pokemon1, self.__Pokemon2, index_attack)
+        combat = Combat(Pokemon, index_attack)
+        self.addAction(combat)
 
-        self.__Actual_Turn += 1
-#################################################################################################################}
 
+#################################################################################################################
 
     def Bag(self):
         bag = self.__Player.getBag()
@@ -106,7 +69,7 @@ class Battle:
         comando = str(input())
 
         while comando not in ["1","2","3","4","5"]:
-            comando = input()
+            comando = str(input())
 
         if(comando == "1"):
             print("---------Objetos---------")
@@ -128,33 +91,85 @@ class Battle:
             print("---------OBJ. Clave---------")
             pass
 
+########################################################################################################
+
+    def Chance_Pokemon(self):
+
+        team = self.__Player.getTeam()
+        cont = 1
+
+        for pokemon in team:
+            print("("+str(cont)+")", pokemon.getName())
+            cont += 1
+
+        pokemon_index = int(input())
+
+        while pokemon_index not in range(len(team) + 1):
+            pokemon_index = int(input())
+
+
+        self.__Current_Pokemon = team[pokemon_index-1]
+
+
+########################################################################################################
 
     def HUIR(self):
         self.__Huir = True
 
-    def Comando(self):
-        print("---------Menu---------")
-        print("¿Que deberia hacer", self.__Player.getTeam()[0].getName()+"?")
-        print("(1) LUCHA    (2) Mochila")
-        print("(3) POKEMON  (4) HUIR")
-        comando = input()
+########################################################################################################
 
-        index_pokemon = 0
+    def Comando(self):
+        comando = input()
         while comando not in OPTIONS:
             comando = input()
 
         if comando == "1":
             print("---------Batalla---------")
-            self.Combat()
+            self.Combat(self.__Current_Pokemon)
         elif comando == "2":
             print("---------Mochila---------")
             self.Bag()
         elif comando == "3":
             print("---------Equipo---------")
-            pass
+            self.Chance_Pokemon()
+
         else:
             self.HUIR()
 
+#########################################################################################################
+
+    def bot(self):
+        index_attack = random.randint(0, len(self.__Pokemon2.getAttacks()) - 1)
+        combate = Combat(self.__Pokemon2, index_attack)
+        combate.setFlag(flag = True)
+        self.addAction(combate)
+
+#########################################################################################################
+
+    def Action(self):
+        print("---------Menu---------")
+        print("¿Que deberia hacer", self.__Current_Pokemon.getName()+"?")
+        print("(1) LUCHA    (2) Mochila")
+        print("(3) POKEMON  (4) HUIR")
+
+        self.Comando()
+        self.bot()
+        
+        for x in self.__Turns:
+            if x.getFlag():
+                x.setOpponent(self.__Pokemon2)
+                x.Attack()
+                if self.is_finished():
+                    break
+            else:
+                x.setOpponent(self.__Current_Pokemon)
+                x.Attack()
+                if self.is_finished():
+                    break
+
+        self.__Turns.clear()
+
+############################################################################################################
 
     def is_finished(self):
 
@@ -166,6 +181,8 @@ class Battle:
             self.__Loser = self.__Pokemon2
 
         return self.__Current_Pokemon.getCurrent_HP() <= 0 or self.__Pokemon2.getCurrent_HP() <= 0
+
+###############################################################################################################
 
     def Calculation_EXP (self):
 
@@ -179,7 +196,7 @@ class Battle:
             new_exp = (1.5*e*l)/7
 
         self.__Winner.AumentoDeEXP(int(new_exp))
-        if self.__Winner.getName() == self.__Pokemon1.getName():
+        if self.__Winner.getName() == self.__Current_Pokemon.getName():
             print("Has ganado!!!")
             print("+",int(new_exp),"Exp")
             print("Nivel de experiencia ",int(new_exp),"/",self.__Winner.getExp_Next_Level())
